@@ -208,6 +208,40 @@ Run the test suite:
 npm test
 ```
 
+### Reference Demo Tests
+
+Below is an illustrative reference of how integration scenarios are structured and verified programmatically within `tests/integration.test.js`:
+
+```javascript
+const queueManager = require('../queue/queueManager');
+const { executeCommand } = require('../worker/executor');
+const { JobState } = require('../models/Job');
+
+describe('Job Queue Integration Scenarios', () => {
+  // Scenario 1: Successful Job execution and state transitions
+  test('Successful Job execution and state transitions', async () => {
+    // 1. Enqueue job
+    const job = await queueManager.addJob({ command: 'echo success' });
+    expect(job.state).toBe(JobState.PENDING);
+
+    // 2. Worker picks up job atomically
+    const processingJob = await queueManager.pickNextJob('worker-demo');
+    expect(processingJob.id).toBe(job.id);
+    expect(processingJob.state).toBe(JobState.PROCESSING);
+    expect(processingJob.locked_by).toBe('worker-demo');
+
+    // 3. Executor runs command
+    const result = await executeCommand(processingJob.command);
+    expect(result.success).toBe(true);
+
+    // 4. Mark job completed
+    const completedJob = await queueManager.markCompleted(processingJob.id);
+    expect(completedJob.state).toBe(JobState.COMPLETED);
+    expect(completedJob.locked_by).toBeNull();
+  });
+});
+```
+
 ---
 
 ## 📝 Key Design Assumptions & Trade-offs
