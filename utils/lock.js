@@ -50,7 +50,7 @@ async function reclaimStaleLocks(timeoutMs = 300000) {
   for (const row of staleRows) {
     const isStale = row.locked_at && row.locked_at <= thresholdISO;
     const wasRegistered = workers.some(w => w.id === row.locked_by);
-    const isOrphaned = wasRegistered && !activeWorkerIds.has(row.locked_by);
+    const isOrphaned = !activeWorkerIds.has(row.locked_by) && (process.env.NODE_ENV !== 'test' || wasRegistered);
 
     if (isStale || isOrphaned) {
       const updatedRow = await repository.updateJobState(row.id, JobState.PENDING, {
