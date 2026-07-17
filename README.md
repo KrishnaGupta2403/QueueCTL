@@ -4,6 +4,9 @@ A modern, production-grade, and concurrency-safe CLI background job queue system
 
 `queuectl` provides a robust architecture for managing asynchronous background tasks, utilizing atomic transactions for parallel workers, automatic retry logic with exponential backoff, dead letter queue (DLQ) tracking, and an interactive system dashboard.
 
+### 🎥 Working CLI Demo Video
+You can watch a live demo of the CLI system and its various features in action here: [QueueCTL CLI Working Demo](https://drive.google.com/file/d/1hMid7ylr-wsrhKXQY82EO1HE92eJ_w4P/view?usp=sharing)
+
 ---
 
 ## 🎨 CLI Preview
