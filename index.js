@@ -13,6 +13,25 @@ const Table = require('cli-table3');
 
 const program = new Command();
 
+function wrapInDoubleBox(text) {
+  const lines = text.split('\n');
+  const maxLen = Math.max(...lines.map(l => l.length));
+  
+  const topBorder = '╔' + '═'.repeat(maxLen + 4) + '╗';
+  const bottomBorder = '╚' + '═'.repeat(maxLen + 4) + '╝';
+  const emptyLine = '║' + ' '.repeat(maxLen + 4) + '║';
+  
+  const boxedLines = [
+    topBorder,
+    emptyLine,
+    ...lines.map(line => '║  ' + line.padEnd(maxLen, ' ') + '  ║'),
+    emptyLine,
+    bottomBorder
+  ];
+  
+  return boxedLines.join('\n');
+}
+
 function applyGradient(text) {
   const lines = text.split('\n');
   return lines.map(line => {
@@ -20,7 +39,7 @@ function applyGradient(text) {
     const len = line.length || 1;
     for (let i = 0; i < line.length; i++) {
       const ratio = i / len;
-      // Magenta/Red-Violet to Deep Purple gradient
+      // Red-Violet (Magenta) to Deep Purple gradient
       const r = Math.round(255 + ratio * (120 - 255));
       const g = Math.round(50 + ratio * (80 - 50));
       const b = Math.round(150 + ratio * (255 - 150));
@@ -32,19 +51,27 @@ function applyGradient(text) {
 
 program.configureHelp({
   formatHelp: (cmd, helper) => {
-    const bannerText = figlet.textSync('QUEUECTL', { font: 'ANSI Shadow', horizontalLayout: 'full' });
-    const coloredBanner = applyGradient(bannerText);
+    const bannerText = figlet.textSync('QUEUECTL', { font: 'ANSI Shadow', horizontalLayout: 'full' }).trim();
+    const boxedBanner = wrapInDoubleBox(bannerText);
+    const coloredBanner = applyGradient(boxedBanner);
     
     let help = `\n${coloredBanner}\n`;
-    help += pc.dim('   by QueueCTL Team') + '\n\n';
+    help += pc.dim('     by QueueCTL Team') + '\n\n';
     
     help += pc.bold(pc.cyan(cmd.description())) + '\n\n';
     help += pc.bold(pc.magenta('Usage: ')) + pc.white(helper.commandUsage(cmd)) + '\n\n';
     
     const opts = cmd.options;
+    const boxBorders = {
+      'top': pc.magenta('─'), 'top-mid': pc.magenta('┬'), 'top-left': pc.magenta('┌'), 'top-right': pc.magenta('┐'),
+      'bottom': pc.magenta('─'), 'bottom-mid': pc.magenta('┴'), 'bottom-left': pc.magenta('└'), 'bottom-right': pc.magenta('┘'),
+      'left': pc.magenta('│'), 'left-mid': '', 'mid': '', 'mid-mid': '',
+      'right': pc.magenta('│'), 'right-mid': '', 'middle': pc.magenta(' │ ')
+    };
+
     if (opts.length > 0) {
       help += pc.bold(pc.magenta('Options:\n'));
-      const optTable = new Table({ chars: { 'top': '','top-mid': '','top-left': '','top-right': '','bottom': '','bottom-mid': '','bottom-left': '','bottom-right': '','left': '','left-mid': '','mid': '','mid-mid': '','right': '','right-mid': '','middle': '  ' }, style: { 'padding-left': 2, 'padding-right': 0 } });
+      const optTable = new Table({ chars: boxBorders, style: { 'padding-left': 2, 'padding-right': 2 } });
       opts.forEach(opt => optTable.push([pc.bold(pc.red(opt.flags)), pc.white(opt.description)]));
       help += optTable.toString() + '\n\n';
     }
@@ -52,7 +79,7 @@ program.configureHelp({
     const subcmds = cmd.commands;
     if (subcmds.length > 0) {
       help += pc.bold(pc.magenta('Commands:\n'));
-      const cmdTable = new Table({ chars: { 'top': '','top-mid': '','top-left': '','top-right': '','bottom': '','bottom-mid': '','bottom-left': '','bottom-right': '','left': '','left-mid': '','mid': '','mid-mid': '','right': '','right-mid': '','middle': pc.magenta(' │ ') }, style: { 'padding-left': 2, 'padding-right': 2 } });
+      const cmdTable = new Table({ chars: boxBorders, style: { 'padding-left': 2, 'padding-right': 2 } });
       subcmds.forEach(sub => {
         cmdTable.push([pc.bold(pc.cyan(sub.name())) + ' ' + pc.dim(sub.options.length > 0 ? '[options]' : ''), pc.white(sub.description())]);
         if (sub.commands && sub.commands.length > 0) {

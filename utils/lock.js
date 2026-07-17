@@ -13,26 +13,58 @@ const getNow = () => new Date().toISOString();
  */
 async function reclaimStaleLocks(timeoutMs = 300000) {
   const db = await getDb();
-  const thresholdISO = new Date(Date.now() - timeoutMs).toISOString();
+  
+  // 1. Verify all registered workers are still alive, clean up stale ones
+  const workers = await repository.listWorkers();
+  const activeWorkerIds = new Set();
+  
+  for (const w of workers) {
+    let alive = false;
+    if (w.pid) {
+      try {
+        process.kill(w.pid, 0);
+        alive = true;
+      } catch (err) {
+        if (err.code === 'EPERM') {
+          alive = true;
+        }
+      }
+    }
+    
+    if (alive) {
+      activeWorkerIds.add(w.id);
+    } else {
+      await repository.removeWorker(w.id);
+      logger.warn(`Cleaned up stale worker registry entry [${w.id}] (PID ${w.pid} is not running).`, { workerId: w.id });
+    }
+  }
 
+  // 2. Fetch all processing jobs
   const staleRows = await db.all(
-    `SELECT * FROM Jobs WHERE state = ? AND locked_at IS NOT NULL AND locked_at <= ?`,
-    [JobState.PROCESSING, thresholdISO]
+    `SELECT * FROM Jobs WHERE state = ?`,
+    [JobState.PROCESSING]
   );
 
+  const thresholdISO = new Date(Date.now() - timeoutMs).toISOString();
   const reclaimedJobs = [];
   for (const row of staleRows) {
-    const updatedRow = await repository.updateJobState(row.id, JobState.PENDING, {
-      locked_by: null,
-      locked_at: null,
-    });
-    if (updatedRow) {
-      const validated = Job.validate(updatedRow);
-      reclaimedJobs.push(validated);
-      logger.warn(
-        `Reclaimed stale job [${row.id}] (locked by "${row.locked_by}" at ${row.locked_at}). Reset to PENDING.`,
-        { jobId: row.id }
-      );
+    const isStale = row.locked_at && row.locked_at <= thresholdISO;
+    const wasRegistered = workers.some(w => w.id === row.locked_by);
+    const isOrphaned = wasRegistered && !activeWorkerIds.has(row.locked_by);
+
+    if (isStale || isOrphaned) {
+      const updatedRow = await repository.updateJobState(row.id, JobState.PENDING, {
+        locked_by: null,
+        locked_at: null,
+      });
+      if (updatedRow) {
+        const validated = Job.validate(updatedRow);
+        reclaimedJobs.push(validated);
+        logger.warn(
+          `Reclaimed ${isOrphaned ? 'orphaned' : 'stale'} job [${row.id}] (locked by "${row.locked_by}" at ${row.locked_at}). Reset to PENDING.`,
+          { jobId: row.id }
+        );
+      }
     }
   }
 
