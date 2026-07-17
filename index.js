@@ -7,7 +7,67 @@ const { listCommand } = require('./cli/list');
 const { listDlqCommand, retryDlqCommand } = require('./cli/dlq');
 const { setConfigCommand, getConfigCommand } = require('./cli/config');
 
+const figlet = require('figlet');
+const pc = require('picocolors');
+const Table = require('cli-table3');
+
 const program = new Command();
+
+function applyGradient(text) {
+  const lines = text.split('\n');
+  return lines.map(line => {
+    let coloredLine = '';
+    const len = line.length || 1;
+    for (let i = 0; i < line.length; i++) {
+      const ratio = i / len;
+      // Magenta/Red-Violet to Deep Purple gradient
+      const r = Math.round(255 + ratio * (120 - 255));
+      const g = Math.round(50 + ratio * (80 - 50));
+      const b = Math.round(150 + ratio * (255 - 150));
+      coloredLine += `\x1b[38;2;${r};${g};${b}m${line[i]}\x1b[39m`;
+    }
+    return coloredLine;
+  }).join('\n');
+}
+
+program.configureHelp({
+  formatHelp: (cmd, helper) => {
+    const bannerText = figlet.textSync('QUEUECTL', { font: 'ANSI Shadow', horizontalLayout: 'full' });
+    const coloredBanner = applyGradient(bannerText);
+    
+    let help = `\n${coloredBanner}\n`;
+    help += pc.dim('   by QueueCTL Team') + '\n\n';
+    
+    help += pc.bold(pc.cyan(cmd.description())) + '\n\n';
+    help += pc.bold(pc.magenta('Usage: ')) + pc.white(helper.commandUsage(cmd)) + '\n\n';
+    
+    const opts = cmd.options;
+    if (opts.length > 0) {
+      help += pc.bold(pc.magenta('Options:\n'));
+      const optTable = new Table({ chars: { 'top': '','top-mid': '','top-left': '','top-right': '','bottom': '','bottom-mid': '','bottom-left': '','bottom-right': '','left': '','left-mid': '','mid': '','mid-mid': '','right': '','right-mid': '','middle': '  ' }, style: { 'padding-left': 2, 'padding-right': 0 } });
+      opts.forEach(opt => optTable.push([pc.bold(pc.red(opt.flags)), pc.white(opt.description)]));
+      help += optTable.toString() + '\n\n';
+    }
+    
+    const subcmds = cmd.commands;
+    if (subcmds.length > 0) {
+      help += pc.bold(pc.magenta('Commands:\n'));
+      const cmdTable = new Table({ chars: { 'top': '','top-mid': '','top-left': '','top-right': '','bottom': '','bottom-mid': '','bottom-left': '','bottom-right': '','left': '','left-mid': '','mid': '','mid-mid': '','right': '','right-mid': '','middle': pc.magenta(' │ ') }, style: { 'padding-left': 2, 'padding-right': 2 } });
+      subcmds.forEach(sub => {
+        cmdTable.push([pc.bold(pc.cyan(sub.name())) + ' ' + pc.dim(sub.options.length > 0 ? '[options]' : ''), pc.white(sub.description())]);
+        if (sub.commands && sub.commands.length > 0) {
+          sub.commands.forEach(subSub => {
+            const term = helper.subcommandTerm(subSub);
+            cmdTable.push([pc.cyan(`  ${sub.name()} ${term}`), pc.white(subSub.description())]);
+          });
+        }
+      });
+      help += cmdTable.toString() + '\n\n';
+    }
+    help += pc.dim('Developed for high-throughput reliability.\n');
+    return help;
+  }
+});
 
 program
   .name('queuectl')

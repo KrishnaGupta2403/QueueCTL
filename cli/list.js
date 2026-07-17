@@ -8,16 +8,23 @@ async function listCommand(options = {}) {
       if (jobs.length === 0) {
         console.log(options.state ? `No jobs found with state: '${options.state}'.` : 'No jobs found.');
       } else {
-        console.log(`\nFound ${jobs.length} job(s):\n`);
+        const pc = require('picocolors');
+        console.log(`\nFound ${pc.bold(pc.cyan(jobs.length))} job(s):\n`);
         jobs.forEach((job) => {
-          console.log(`ID:         ${job.id}`);
-          console.log(`Command:    ${job.command}`);
-          console.log(`State:      ${job.state.toUpperCase()}`);
-          console.log(`Attempts:   ${job.attempts}/${job.max_retries}`);
-          console.log(`Created At: ${job.created_at}`);
-          console.log(`Updated At: ${job.updated_at}`);
-          if (job.last_error) console.log(`Last Error: ${job.last_error}`);
-          console.log('--------------------------------------------------');
+          console.log(`${pc.gray('ID:')}         ${pc.white(job.id)}`);
+          console.log(`${pc.gray('Command:')}    ${pc.green(job.command)}`);
+          let stateColor = pc.white;
+          if (job.state === 'pending') stateColor = pc.cyan;
+          if (job.state === 'processing') stateColor = pc.blue;
+          if (job.state === 'completed') stateColor = pc.green;
+          if (job.state === 'failed') stateColor = pc.yellow;
+          if (job.state === 'dead') stateColor = pc.red;
+          console.log(`${pc.gray('State:')}      ${stateColor(job.state.toUpperCase())}`);
+          console.log(`${pc.gray('Attempts:')}   ${pc.yellow(job.attempts)}/${pc.yellow(job.max_retries)}`);
+          console.log(`${pc.gray('Created At:')} ${pc.dim(job.created_at)}`);
+          console.log(`${pc.gray('Updated At:')} ${pc.dim(job.updated_at)}`);
+          if (job.last_error) console.log(`${pc.red('Last Error:')} ${pc.red(job.last_error)}`);
+          console.log(pc.gray('--------------------------------------------------'));
         });
       }
     }

@@ -27,7 +27,8 @@ class JobService {
     const activeWorkersCount = workers.length;
 
     // Format output clearly, e.g., "Pending: 3, Running: 1, Completed: 4, Dead: 0"
-    const formatted = `Pending: ${counts.pending}, Running: ${counts.processing}, Completed: ${counts.completed}, Failed: ${counts.failed}, Dead: ${counts.dead} (Active Workers: ${activeWorkersCount})`;
+    const pc = require('picocolors');
+    const formatted = `${pc.cyan('Pending:')} ${pc.bold(counts.pending)}, ${pc.blue('Running:')} ${pc.bold(counts.processing)}, ${pc.green('Completed:')} ${pc.bold(counts.completed)}, ${pc.yellow('Failed:')} ${pc.bold(counts.failed)}, ${pc.red('Dead:')} ${pc.bold(counts.dead)} ${pc.magenta(`(Active Workers: ${activeWorkersCount})`)}`;
 
     return {
       counts,

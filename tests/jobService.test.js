@@ -73,12 +73,15 @@ describe('Status & Job Service (Module 9)', () => {
     expect(status.activeWorkers).toBe(rawWorkerCount);
     expect(status.activeWorkers).toBe(2);
 
-    expect(status.formatted).toContain('Pending: 2');
-    expect(status.formatted).toContain('Running: 1');
-    expect(status.formatted).toContain('Completed: 3');
-    expect(status.formatted).toContain('Failed: 1');
-    expect(status.formatted).toContain('Dead: 2');
-    expect(status.formatted).toContain('Active Workers: 2');
+    const stripAnsi = (str) => str.replace(/\x1B\[\d+m/g, '');
+    const cleanFormatted = stripAnsi(status.formatted);
+
+    expect(cleanFormatted).toContain('Pending: 2');
+    expect(cleanFormatted).toContain('Running: 1');
+    expect(cleanFormatted).toContain('Completed: 3');
+    expect(cleanFormatted).toContain('Failed: 1');
+    expect(cleanFormatted).toContain('Dead: 2');
+    expect(cleanFormatted).toContain('Active Workers: 2');
   });
 
   test('list --state <state> shows individual job rows filtered by state', async () => {
